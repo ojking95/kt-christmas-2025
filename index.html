@@ -158,16 +158,17 @@
         
         // Function to pause video
         function pauseVideo() {
-            if (isPlaying && !video.paused) {
-                video.pause();
-                pauseText.classList.remove('visible');
-                playText.classList.add('visible');
-            }
+            console.log('Pausing video...');
+            video.pause();
+            isPlaying = false;
+            pauseText.classList.remove('visible');
+            playText.classList.add('visible');
         }
         
         // Toggle play/pause on click
         function togglePlayPause() {
-            if (video.paused || !isPlaying) {
+            console.log('Toggle - isPlaying:', isPlaying, 'paused:', video.paused);
+            if (video.paused) {
                 startVideo();
             } else {
                 pauseVideo();
@@ -223,23 +224,13 @@
             });
         });
         
-        // Handle when video pauses unexpectedly
+        // Handle when video pauses
         video.addEventListener('pause', function() {
-            if (!video.ended && isPlaying && userInteracted) {
-                // Only auto-resume if user already started it and it wasn't intentional
-                setTimeout(() => {
-                    if (video.paused && !video.ended && userInteracted) {
-                        video.play().catch(() => {
-                            playText.classList.add('visible');
-                            pauseText.classList.remove('visible');
-                        });
-                    }
-                }, 100);
-            } else if (!video.ended && isPlaying) {
-                // Show pause text when paused
-                pauseText.classList.remove('visible');
-                playText.classList.add('visible');
-            }
+            console.log('Video paused event');
+            // Update UI to show play text
+            pauseText.classList.remove('visible');
+            playText.classList.add('visible');
+            isPlaying = false;
         });
         
         // Handle buffering
@@ -248,6 +239,7 @@
         });
         
         video.addEventListener('playing', function() {
+            console.log('Video playing event');
             isPlaying = true;
             playText.classList.remove('visible');
             pauseText.classList.add('visible');
