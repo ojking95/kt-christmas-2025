@@ -87,58 +87,79 @@
         const video = document.getElementById('christmasVideo');
         const playButton = document.getElementById('playButton');
         let isPlaying = false;
-        
+        let userInteracted = false;
+        xq
         // Function to start playing video
         function startVideo() {
-            video.muted = false; // Start with sound enabled
+            userInteracted = true;
+            console.log('Starting video...');
+            
+            // Try with sound first
+            video.muted = false;
             video.play().then(() => {
-                console.log('Video playing');
+                console.log('Video playing with sound');
                 isPlaying = true;
                 playButton.classList.remove('visible');
             }).catch((error) => {
-                console.log('Play failed, trying muted:', error);
+                console.log('Play with sound failed, trying muted:', error);
                 // Try muted if sound fails
                 video.muted = true;
                 video.play().then(() => {
                     console.log('Video playing muted');
                     isPlaying = true;
                     playButton.classList.remove('visible');
-                    // Try to unmute after user interaction
+                    // Enable sound after a moment
                     setTimeout(() => {
                         video.muted = false;
-                    }, 500);
+                    }, 100);
                 }).catch((err) => {
                     console.log('Play completely failed:', err);
                     playButton.classList.add('visible');
+                    alert('Unable to play video. Please try refreshing the page.');
                 });
             });
         }
         
         // Try autoplay when video is ready
         video.addEventListener('canplaythrough', function() {
-            if (!isPlaying) {
-                // Try autoplay
-                video.muted = true; // Start muted for autoplay
+            if (!isPlaying && !userInteracted) {
+                // Try autoplay - must be muted for browsers to allow it
+                video.muted = true;
                 video.play().then(() => {
                     console.log('Video autoplaying muted');
                     isPlaying = true;
                     playButton.classList.remove('visible');
-                    // Enable sound after a moment
+                    // Try to enable sound (might not work without interaction)
                     setTimeout(() => {
                         video.muted = false;
-                    }, 500);
+                    }, 100);
                 }).catch((error) => {
                     console.log('Autoplay blocked:', error);
-                    // Show play button
+                    // Show play button - user needs to click
                     playButton.classList.add('visible');
                 });
             }
         });
         
-        // Click play button or anywhere on page
-        playButton.addEventListener('click', startVideo);
+        // Click handlers - make sure they work
+        playButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            startVideo();
+        });
+        
+        // Click anywhere on page to play
         document.body.addEventListener('click', function(e) {
-            if (!isPlaying) {
+            if (e.target !== playButton) {
+                if (!isPlaying || video.paused) {
+                    startVideo();
+                }
+            }
+        });
+        
+        // Also allow clicking directly on video
+        video.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!isPlaying || video.paused) {
                 startVideo();
             }
         });
@@ -146,15 +167,22 @@
         // Ensure video loops
         video.addEventListener('ended', function() {
             video.currentTime = 0;
-            video.play();
+            video.play().catch(() => {
+                // If play fails, show button again
+                playButton.classList.add('visible');
+                isPlaying = false;
+            });
         });
         
-        // Keep video playing if it pauses unexpectedly
+        // Handle when video pauses unexpectedly
         video.addEventListener('pause', function() {
-            if (!video.ended && isPlaying) {
+            if (!video.ended && isPlaying && userInteracted) {
+                // Only auto-resume if user already started it
                 setTimeout(() => {
-                    if (video.paused && !video.ended) {
-                        video.play();
+                    if (video.paused && !video.ended && userInteracted) {
+                        video.play().catch(() => {
+                            playButton.classList.add('visible');
+                        });
                     }
                 }, 100);
             }
@@ -169,6 +197,9 @@
             isPlaying = true;
             playButton.classList.remove('visible');
         });
+        
+        // Show play button initially
+        playButton.classList.add('visible');
         
         // Load video
         video.load();
