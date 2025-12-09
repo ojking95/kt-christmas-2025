@@ -12,7 +12,7 @@
         }
         
         body {
-            background-color: #000000;
+            background-color: #ffffff;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -38,29 +38,57 @@
             object-fit: contain;
         }
         
-        .play-button {
+        .logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            width: 150px;
+            height: auto;
+            cursor: pointer;
+        }
+        
+        .play-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: #FF6B6B;
-            color: #ffffff;
-            border: none;
-            padding: 20px 40px;
+            color: #00045F;
             font-size: 24px;
             font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
             z-index: 10;
             display: none;
+            pointer-events: none;
         }
         
-        .play-button.visible {
+        .play-text.visible {
             display: block;
         }
         
-        .play-button:hover {
-            background-color: #ff5252;
+        .pause-text {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: #FF6B6B;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10;
+            display: none;
+            pointer-events: none;
+        }
+        
+        .pause-text.visible {
+            display: block;
+        }
+        
+        .copyright {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #8585C7;
+            font-size: 14px;
+            z-index: 10;
+            pointer-events: none;
         }
         
         /* Hide controls but keep them accessible */
@@ -75,17 +103,23 @@
 </head>
 <body>
     <div class="video-container">
+        <a href="https://kingandtuke.com" target="_blank" class="logo-link">
+            <img id="logo" src="K&T Logo.svg" alt="K&T Logo" class="logo">
+        </a>
         <video id="christmasVideo" loop playsinline preload="auto">
             <source src="Sanny Clores Illustration with K&T Nose.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
-        <button id="playButton" class="play-button">▶ Play Animation</button>
+        <div id="playText" class="play-text">Click to play</div>
+        <div id="pauseText" class="pause-text">Click to pause</div>
+        <div class="copyright">© 2025 K&T. All rights reserved.</div>
     </div>
 
     <script>
-        // Get video element and play button
+        // Get video element and text elements
         const video = document.getElementById('christmasVideo');
-        const playButton = document.getElementById('playButton');
+        const playText = document.getElementById('playText');
+        const pauseText = document.getElementById('pauseText');
         let isPlaying = false;
         let userInteracted = false;
         
@@ -99,7 +133,8 @@
             video.play().then(() => {
                 console.log('Video playing with sound');
                 isPlaying = true;
-                playButton.classList.remove('visible');
+                playText.classList.remove('visible');
+                pauseText.classList.add('visible');
             }).catch((error) => {
                 console.log('Play with sound failed, trying muted:', error);
                 // Try muted if sound fails
@@ -107,17 +142,36 @@
                 video.play().then(() => {
                     console.log('Video playing muted');
                     isPlaying = true;
-                    playButton.classList.remove('visible');
+                    playText.classList.remove('visible');
+                    pauseText.classList.add('visible');
                     // Enable sound after a moment
                     setTimeout(() => {
                         video.muted = false;
                     }, 100);
                 }).catch((err) => {
                     console.log('Play completely failed:', err);
-                    playButton.classList.add('visible');
-                    alert('Unable to play video. Please try refreshing the page.');
+                    playText.classList.add('visible');
+                    pauseText.classList.remove('visible');
                 });
             });
+        }
+        
+        // Function to pause video
+        function pauseVideo() {
+            if (isPlaying && !video.paused) {
+                video.pause();
+                pauseText.classList.remove('visible');
+                playText.classList.add('visible');
+            }
+        }
+        
+        // Toggle play/pause on click
+        function togglePlayPause() {
+            if (video.paused || !isPlaying) {
+                startVideo();
+            } else {
+                pauseVideo();
+            }
         }
         
         // Try autoplay when video is ready
@@ -128,48 +182,43 @@
                 video.play().then(() => {
                     console.log('Video autoplaying muted');
                     isPlaying = true;
-                    playButton.classList.remove('visible');
+                    playText.classList.remove('visible');
+                    pauseText.classList.add('visible');
                     // Try to enable sound (might not work without interaction)
                     setTimeout(() => {
                         video.muted = false;
                     }, 100);
                 }).catch((error) => {
                     console.log('Autoplay blocked:', error);
-                    // Show play button - user needs to click
-                    playButton.classList.add('visible');
+                    // Show play text - user needs to click
+                    playText.classList.add('visible');
+                    pauseText.classList.remove('visible');
                 });
             }
         });
         
-        // Click handlers - make sure they work
-        playButton.addEventListener('click', function(e) {
-            e.stopPropagation();
-            startVideo();
-        });
-        
-        // Click anywhere on page to play
+        // Click handlers - click anywhere to play/pause (except logo link)
         document.body.addEventListener('click', function(e) {
-            if (e.target !== playButton) {
-                if (!isPlaying || video.paused) {
-                    startVideo();
-                }
+            // Don't toggle if clicking on logo link
+            if (e.target.closest('.logo-link')) {
+                return;
             }
+            togglePlayPause();
         });
         
         // Also allow clicking directly on video
         video.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (!isPlaying || video.paused) {
-                startVideo();
-            }
+            togglePlayPause();
         });
         
         // Ensure video loops
         video.addEventListener('ended', function() {
             video.currentTime = 0;
             video.play().catch(() => {
-                // If play fails, show button again
-                playButton.classList.add('visible');
+                // If play fails, show play text again
+                playText.classList.add('visible');
+                pauseText.classList.remove('visible');
                 isPlaying = false;
             });
         });
@@ -177,14 +226,19 @@
         // Handle when video pauses unexpectedly
         video.addEventListener('pause', function() {
             if (!video.ended && isPlaying && userInteracted) {
-                // Only auto-resume if user already started it
+                // Only auto-resume if user already started it and it wasn't intentional
                 setTimeout(() => {
                     if (video.paused && !video.ended && userInteracted) {
                         video.play().catch(() => {
-                            playButton.classList.add('visible');
+                            playText.classList.add('visible');
+                            pauseText.classList.remove('visible');
                         });
                     }
                 }, 100);
+            } else if (!video.ended && isPlaying) {
+                // Show pause text when paused
+                pauseText.classList.remove('visible');
+                playText.classList.add('visible');
             }
         });
         
@@ -195,11 +249,12 @@
         
         video.addEventListener('playing', function() {
             isPlaying = true;
-            playButton.classList.remove('visible');
+            playText.classList.remove('visible');
+            pauseText.classList.add('visible');
         });
         
-        // Show play button initially
-        playButton.classList.add('visible');
+        // Show play text initially
+        playText.classList.add('visible');
         
         // Load video
         video.load();
