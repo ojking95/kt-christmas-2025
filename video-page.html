@@ -51,7 +51,7 @@
         <!-- Replace VIDEO_URL with your hosted MP4 video URL -->
         <!-- For local testing, you can use: file:///path/to/video.mp4 -->
         <!-- For production, host the video on your server and use: https://yoursite.com/video.mp4 -->
-        <video id="christmasVideo" autoplay loop playsinline>
+        <video id="christmasVideo" autoplay loop playsinline preload="auto">
             <source src="Sanny Clores Illustration with K&T Nose.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
@@ -64,6 +64,16 @@
         // Try autoplay with sound enabled first
         // If browser blocks it, fall back to muted autoplay
         let autoplayAttempted = false;
+        let isPlaying = false;
+        
+        // Ensure video keeps playing
+        function ensurePlaying() {
+            if (video.paused && !video.ended) {
+                video.play().catch(err => {
+                    console.log('Play failed:', err);
+                });
+            }
+        }
         
         // Try to play with sound first
         function tryAutoplayWithSound() {
@@ -73,6 +83,7 @@
             video.play().then(() => {
                 // Success! Video is playing with sound
                 console.log('Video autoplaying with sound');
+                isPlaying = true;
             }).catch((error) => {
                 // Browser blocked autoplay with sound
                 // Fall back to muted autoplay
@@ -80,6 +91,7 @@
                 video.muted = true;
                 video.play().then(() => {
                     console.log('Video autoplaying muted');
+                    isPlaying = true;
                     // Try to unmute after a short delay (some browsers allow this)
                     setTimeout(() => {
                         video.muted = false;
@@ -93,25 +105,59 @@
             });
         }
         
-        // Try autoplay when video is ready
-        video.addEventListener('loadeddata', tryAutoplayWithSound);
-        video.addEventListener('canplay', tryAutoplayWithSound);
+        // Wait for enough data to be loaded before playing
+        video.addEventListener('canplaythrough', function() {
+            if (!isPlaying) {
+                tryAutoplayWithSound();
+            }
+        });
         
-        // Also try immediately if video is already loaded
-        if (video.readyState >= 3) {
+        // Also try when some data is loaded
+        video.addEventListener('canplay', function() {
+            if (!isPlaying && video.readyState >= 3) {
+                setTimeout(tryAutoplayWithSound, 100);
+            }
+        });
+        
+        // Try immediately if video is already loaded
+        if (video.readyState >= 4) {
             tryAutoplayWithSound();
+        } else {
+            video.load(); // Force load
         }
         
         // Ensure video loops
         video.addEventListener('ended', function() {
             video.currentTime = 0;
-            video.play();
+            video.play().catch(() => {
+                // If play fails, try again
+                setTimeout(() => video.play(), 100);
+            });
+        });
+        
+        // Keep video playing if it pauses unexpectedly
+        video.addEventListener('pause', function() {
+            if (!video.ended && isPlaying) {
+                setTimeout(ensurePlaying, 100);
+            }
+        });
+        
+        // Handle buffering - resume when ready
+        video.addEventListener('waiting', function() {
+            console.log('Video buffering...');
+        });
+        
+        video.addEventListener('playing', function() {
+            isPlaying = true;
         });
         
         // Enable sound on any user interaction (fallback)
         function enableSoundOnInteraction() {
             if (video.muted) {
                 video.muted = false;
+            }
+            if (video.paused) {
+                video.play();
             }
         }
         
@@ -122,7 +168,8 @@
         // Click anywhere to play if paused
         document.body.addEventListener('click', function(e) {
             if (e.target === document.body || e.target === document.querySelector('.video-container')) {
-                if (video.paused) {
+                if (video.paused || video.ended) {
+                    video.currentTime = 0;
                     video.play().then(() => {
                         video.muted = false; // Enable sound when user clicks
                     });
