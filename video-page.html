@@ -12,14 +12,13 @@
         }
         
         body {
-            background-color: #000000;
+            background-color: #ffffff;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             overflow: hidden;
-            cursor: pointer;
         }
         
         .video-container {
@@ -29,38 +28,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
         }
         
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
-        }
-        
-        .play-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #FF6B6B;
-            color: #ffffff;
-            border: none;
-            padding: 20px 40px;
-            font-size: 24px;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            z-index: 10;
-            display: none;
-        }
-        
-        .play-button.visible {
-            display: block;
-        }
-        
-        .play-button:hover {
-            background-color: #ff5252;
         }
         
         /* Hide controls but keep them accessible */
@@ -75,134 +48,87 @@
 </head>
 <body>
     <div class="video-container">
-        <video id="christmasVideo" loop playsinline preload="auto">
-            <source src="Sanny Clores Illustration with K&T Nose.mp4" type="video/mp4">
+        <!-- Replace VIDEO_URL with your hosted MP4 video URL -->
+        <!-- For local testing, you can use: file:///path/to/video.mp4 -->
+        <!-- For production, host the video on your server and use: https://yoursite.com/video.mp4 -->
+        <video id="christmasVideo" autoplay loop playsinline>
+            <source src="VIDEO_URL_HERE" type="video/mp4">
             Your browser does not support the video tag.
         </video>
-        <button id="playButton" class="play-button">▶ Play Animation</button>
     </div>
 
     <script>
-        // Get video element and play button
+        // Get video element
         const video = document.getElementById('christmasVideo');
-        const playButton = document.getElementById('playButton');
-        let isPlaying = false;
-        let userInteracted = false;
-        xq
-        // Function to start playing video
-        function startVideo() {
-            userInteracted = true;
-            console.log('Starting video...');
+        
+        // Try autoplay with sound enabled first
+        // If browser blocks it, fall back to muted autoplay
+        let autoplayAttempted = false;
+        
+        // Try to play with sound first
+        function tryAutoplayWithSound() {
+            if (autoplayAttempted) return;
+            autoplayAttempted = true;
             
-            // Try with sound first
-            video.muted = false;
             video.play().then(() => {
-                console.log('Video playing with sound');
-                isPlaying = true;
-                playButton.classList.remove('visible');
+                // Success! Video is playing with sound
+                console.log('Video autoplaying with sound');
             }).catch((error) => {
-                console.log('Play with sound failed, trying muted:', error);
-                // Try muted if sound fails
+                // Browser blocked autoplay with sound
+                // Fall back to muted autoplay
+                console.log('Autoplay with sound blocked, trying muted:', error);
                 video.muted = true;
                 video.play().then(() => {
-                    console.log('Video playing muted');
-                    isPlaying = true;
-                    playButton.classList.remove('visible');
-                    // Enable sound after a moment
+                    console.log('Video autoplaying muted');
+                    // Try to unmute after a short delay (some browsers allow this)
                     setTimeout(() => {
                         video.muted = false;
-                    }, 100);
+                    }, 500);
                 }).catch((err) => {
-                    console.log('Play completely failed:', err);
-                    playButton.classList.add('visible');
-                    alert('Unable to play video. Please try refreshing the page.');
+                    console.log('Autoplay completely blocked:', err);
+                    // Show click to play
+                    document.body.style.cursor = 'pointer';
+                    document.body.title = 'Click to play';
                 });
             });
         }
         
         // Try autoplay when video is ready
-        video.addEventListener('canplaythrough', function() {
-            if (!isPlaying && !userInteracted) {
-                // Try autoplay - must be muted for browsers to allow it
-                video.muted = true;
-                video.play().then(() => {
-                    console.log('Video autoplaying muted');
-                    isPlaying = true;
-                    playButton.classList.remove('visible');
-                    // Try to enable sound (might not work without interaction)
-                    setTimeout(() => {
-                        video.muted = false;
-                    }, 100);
-                }).catch((error) => {
-                    console.log('Autoplay blocked:', error);
-                    // Show play button - user needs to click
-                    playButton.classList.add('visible');
-                });
-            }
-        });
+        video.addEventListener('loadeddata', tryAutoplayWithSound);
+        video.addEventListener('canplay', tryAutoplayWithSound);
         
-        // Click handlers - make sure they work
-        playButton.addEventListener('click', function(e) {
-            e.stopPropagation();
-            startVideo();
-        });
-        
-        // Click anywhere on page to play
-        document.body.addEventListener('click', function(e) {
-            if (e.target !== playButton) {
-                if (!isPlaying || video.paused) {
-                    startVideo();
-                }
-            }
-        });
-        
-        // Also allow clicking directly on video
-        video.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (!isPlaying || video.paused) {
-                startVideo();
-            }
-        });
+        // Also try immediately if video is already loaded
+        if (video.readyState >= 3) {
+            tryAutoplayWithSound();
+        }
         
         // Ensure video loops
         video.addEventListener('ended', function() {
             video.currentTime = 0;
-            video.play().catch(() => {
-                // If play fails, show button again
-                playButton.classList.add('visible');
-                isPlaying = false;
-            });
+            video.play();
         });
         
-        // Handle when video pauses unexpectedly
-        video.addEventListener('pause', function() {
-            if (!video.ended && isPlaying && userInteracted) {
-                // Only auto-resume if user already started it
-                setTimeout(() => {
-                    if (video.paused && !video.ended && userInteracted) {
-                        video.play().catch(() => {
-                            playButton.classList.add('visible');
-                        });
-                    }
-                }, 100);
+        // Enable sound on any user interaction (fallback)
+        function enableSoundOnInteraction() {
+            if (video.muted) {
+                video.muted = false;
+            }
+        }
+        
+        document.addEventListener('click', enableSoundOnInteraction, { once: true });
+        document.addEventListener('touchstart', enableSoundOnInteraction, { once: true });
+        document.addEventListener('keydown', enableSoundOnInteraction, { once: true });
+        
+        // Click anywhere to play if paused
+        document.body.addEventListener('click', function(e) {
+            if (e.target === document.body || e.target === document.querySelector('.video-container')) {
+                if (video.paused) {
+                    video.play().then(() => {
+                        video.muted = false; // Enable sound when user clicks
+                    });
+                }
             }
         });
-        
-        // Handle buffering
-        video.addEventListener('waiting', function() {
-            console.log('Video buffering...');
-        });
-        
-        video.addEventListener('playing', function() {
-            isPlaying = true;
-            playButton.classList.remove('visible');
-        });
-        
-        // Show play button initially
-        playButton.classList.add('visible');
-        
-        // Load video
-        video.load();
     </script>
 </body>
 </html>
