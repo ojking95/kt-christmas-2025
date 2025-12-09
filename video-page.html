@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K&T Christmas Animation 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        .video-container {
+            width: 100%;
+            max-width: 1920px;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        /* Hide controls but keep them accessible */
+        video::-webkit-media-controls {
+            display: none !important;
+        }
+        
+        video::-webkit-media-controls-enclosure {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <!-- Replace VIDEO_URL with your hosted MP4 video URL -->
+        <!-- For local testing, you can use: file:///path/to/video.mp4 -->
+        <!-- For production, host the video on your server and use: https://yoursite.com/video.mp4 -->
+        <video id="christmasVideo" autoplay loop playsinline>
+            <source src="Sanny Clores Illustration with K&T Nose.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <script>
+        // Get video element
+        const video = document.getElementById('christmasVideo');
+        
+        // Try autoplay with sound enabled first
+        // If browser blocks it, fall back to muted autoplay
+        let autoplayAttempted = false;
+        
+        // Try to play with sound first
+        function tryAutoplayWithSound() {
+            if (autoplayAttempted) return;
+            autoplayAttempted = true;
+            
+            video.play().then(() => {
+                // Success! Video is playing with sound
+                console.log('Video autoplaying with sound');
+            }).catch((error) => {
+                // Browser blocked autoplay with sound
+                // Fall back to muted autoplay
+                console.log('Autoplay with sound blocked, trying muted:', error);
+                video.muted = true;
+                video.play().then(() => {
+                    console.log('Video autoplaying muted');
+                    // Try to unmute after a short delay (some browsers allow this)
+                    setTimeout(() => {
+                        video.muted = false;
+                    }, 500);
+                }).catch((err) => {
+                    console.log('Autoplay completely blocked:', err);
+                    // Show click to play
+                    document.body.style.cursor = 'pointer';
+                    document.body.title = 'Click to play';
+                });
+            });
+        }
+        
+        // Try autoplay when video is ready
+        video.addEventListener('loadeddata', tryAutoplayWithSound);
+        video.addEventListener('canplay', tryAutoplayWithSound);
+        
+        // Also try immediately if video is already loaded
+        if (video.readyState >= 3) {
+            tryAutoplayWithSound();
+        }
+        
+        // Ensure video loops
+        video.addEventListener('ended', function() {
+            video.currentTime = 0;
+            video.play();
+        });
+        
+        // Enable sound on any user interaction (fallback)
+        function enableSoundOnInteraction() {
+            if (video.muted) {
+                video.muted = false;
+            }
+        }
+        
+        document.addEventListener('click', enableSoundOnInteraction, { once: true });
+        document.addEventListener('touchstart', enableSoundOnInteraction, { once: true });
+        document.addEventListener('keydown', enableSoundOnInteraction, { once: true });
+        
+        // Click anywhere to play if paused
+        document.body.addEventListener('click', function(e) {
+            if (e.target === document.body || e.target === document.querySelector('.video-container')) {
+                if (video.paused) {
+                    video.play().then(() => {
+                        video.muted = false; // Enable sound when user clicks
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
